@@ -48,13 +48,13 @@ details[open] .chev{transform:rotate(-135deg)}
 details[open]>summary{background:#2f343c}
 .guide{padding:6px 14px 14px;background:#1f242b;border-bottom:1px solid var(--edge);border-left:3px solid var(--blue)}
 .guide h4{margin:14px 0 6px;font-size:14px;color:var(--blue)}
-.guide ol{margin:0;padding-left:22px}.guide li{margin:8px 0}
+.guide ol,.guide ul{margin:0;padding-left:22px}.guide p{margin:10px 0 4px}.guide li{margin:8px 0}
 .guide b{color:#fff}
 .note{border-left:3px solid var(--amber);margin:14px;padding:8px 12px;color:var(--dim);font-size:13px;background:#2b2a27}
 #out:empty::before{content:"Enter a shared cM total to see ranked relationships.";display:block;padding:18px 14px;color:var(--dim)}
 .guide{padding:6px 14px 14px;background:#1f242b;border-bottom:1px solid var(--edge);border-left:3px solid var(--blue)}
 .guide h4{margin:14px 0 6px;font-size:14px;color:var(--blue)}
-.guide ol{margin:0;padding-left:22px}.guide li{margin:8px 0}
+.guide ol,.guide ul{margin:0;padding-left:22px}.guide p{margin:10px 0 4px}.guide li{margin:8px 0}
 .guide b{color:#fff}
 .credit{color:var(--dim);font-size:12px;margin:0}
 @media(max-width:640px){
@@ -77,7 +77,7 @@ details[open]>summary{background:#2f343c}
 <div class="note">Probabilities come from Shared cM Project v4 histograms with equal weight per relationship. They are guides, not proof. Distant cousins can share 0 cM. Endogamy or pedigree collapse raises totals, so a high result may mean a more distant relationship.</div></section>
 <p class="credit">Data: The Shared cM Project v4.0 (March 2020), Blaine T. Bettinger, CC BY 4.0.</p>
 </main>
-<script type="py" config='{"files":{"./engine.py?v=5":"engine.py","./data/relationships.csv?v=5":"data/relationships.csv","./data/histograms.json?v=5":"data/histograms.json"}}'>
+<script type="py" config='{"files":{"./engine.py?v=6":"engine.py","./data/relationships.csv?v=6":"data/relationships.csv","./data/histograms.json?v=6":"data/histograms.json"}}'>
 from pyscript import document
 from pyodide.ffi import create_proxy
 import engine
@@ -90,6 +90,16 @@ def run(event=None):
         _run()
     except Exception as ex:
         msg.innerText = f"Error: {type(ex).__name__}: {ex}"
+
+def render(scens):
+    h = ""
+    for s in scens:
+        if s["title"]: h += f'<h4>{s["title"]}</h4>'
+        ex = "".join(f"<li>{e}</li>" for e in s["examples"])
+        h += (f'<p><b>This match could be:</b> {s["name"]}. For example:</p><ul>{ex}</ul>'
+              f'<p><b>Where to look:</b> {s["where"]}.</p><ol>'
+              + "".join(f"<li>{x}</li>" for x in s["steps"]) + "</ol>")
+    return h
 
 def _run():
     try:
@@ -109,8 +119,7 @@ def _run():
     html = ""
     for i, x in enumerate(rows):
         r = x["r"]
-        steps = "".join(f"<h4>{t}</h4><ol>" + "".join(f"<li>{x}</li>" for x in L) + "</ol>"
-                        for t, L in engine.guidance(r))
+        steps = render(engine.guidance(r))
         tag = '<span class="tag ok">in range</span>' if x["in_range"] else '<span class="tag no">outside range</span>'
         w = max(2, min(100, x["p"]))
         html += (f'<details class="row"><summary><span class="n">{r["label"]}</span>'
