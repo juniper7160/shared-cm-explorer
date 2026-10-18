@@ -50,6 +50,14 @@ details[open]>summary{background:#2f343c}
 .guide li{margin:5px 0}
 .note{border-left:3px solid var(--amber);margin:14px;padding:8px 12px;color:var(--dim);font-size:13px;background:#2b2a27}
 #out:empty::before{content:"Enter a shared cM total to see ranked relationships.";display:block;padding:18px 14px;color:var(--dim)}
+.guide2{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;padding:14px;background:#1f242b;border-bottom:1px solid var(--edge);border-left:3px solid var(--blue)}
+.dwrap{flex:0 1 440px;min-width:0;width:100%}
+.guide2 ol{flex:1 1 260px;margin:0;padding-left:22px}.guide2 li{margin:5px 0}
+.dia{display:block;width:100%;height:auto}
+.dia line{stroke:#5f6b7c;stroke-width:2}
+.dia circle{stroke-width:2;fill:var(--panel);stroke:#8f99a8}
+.dia .ca{fill:var(--amber);stroke:var(--amber)}.dia .you{fill:var(--blue);stroke:var(--blue)}.dia .mt{fill:var(--green);stroke:var(--green)}
+.dia text{fill:var(--dim);font:11px -apple-system,"SF Pro Text",sans-serif}
 .credit{color:var(--dim);font-size:12px;margin:0}
 @media(max-width:640px){
  body{font-size:16px}
@@ -104,7 +112,7 @@ def run(event=None):
                  f'<div class="track"><div class="fill{" top" if i == 0 else ""}" style="width:{w:.1f}%"></div></div>'
                  f'<span class="p">{x["p"]:.1f}%</span>'
                  f'<span class="m">{r["min_cm"]}-{r["max_cm"]} cM, avg {r["avg_cm"]} {tag}</span>'
-                 f'<span class="chev"></span></summary><ol class="guide">{steps}</ol></details>')
+                 f'<span class="chev"></span></summary><div class="guide2">{engine.diagram(r)}<ol>{steps}</ol></div></details>')
     out.innerHTML = html
 
 def pick(v):
