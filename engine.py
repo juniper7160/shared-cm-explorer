@@ -34,38 +34,70 @@ def rank(cm):
         x["p"] = 100 * x["d"] / tot
     return sorted(rows, key=lambda x: -x["p"])
 
-FIXED = {
- "PARENT_CHILD": ["Your parent or your child. Check your own household and birth records."],
- "SIBLING": ["A full sibling: same two parents. Check parents' children, including any unknown or unrecorded births."],
- "HALF_SIBLING": ["Shares one parent. Look at each of your parents for other partners and other children."],
- "AUNT_NIECE": ["Aunt/uncle (a sibling of your parent) or niece/nephew (a child of your sibling). Check your parents' siblings and your siblings' children."],
- "GRANDPARENT": ["Your grandparent or grandchild. Check your four grandparents (or your children's children)."],
- "GREAT_AUNT": ["Sibling of a grandparent, or the child of a cousin-level sibling line: check your grandparents' siblings and their children."],
- "GREAT_GRANDPARENT": ["Your great-grandparent or great-grandchild. Check your eight great-grandparents."],
- "HALF_AUNT_NIECE": ["Half-sibling of a parent. Look at each parent for a second partner; half-aunts/uncles descend from that parent's other relationship."],
- "GG_AUNT": ["Sibling of a great-grandparent. Check your great-grandparents' siblings."],
- "HALF_GREAT_AUNT": ["Half-sibling of a grandparent. Check each grandparent for a second partner."],
- "HALF_GG_AUNT": ["Half-sibling of a great-grandparent. Check each great-grandparent for a second partner."],
+SPEC = {"PARENT_CHILD": (1, 0, 0), "GRANDPARENT": (2, 0, 0), "GREAT_GRANDPARENT": (3, 0, 0),
+        "SIBLING": (1, 1, 0), "HALF_SIBLING": (1, 1, 1),
+        "AUNT_NIECE": (2, 1, 0), "HALF_AUNT_NIECE": (2, 1, 1),
+        "GREAT_AUNT": (3, 2, 0), "HALF_GREAT_AUNT": (3, 2, 1),
+        "GG_AUNT": (4, 3, 0), "HALF_GG_AUNT": (4, 3, 1)}
+
+def paths(r):
+    """(generations from common ancestor to YOU, to the MATCH, half?)"""
+    if r["id"] in SPEC:
+        return SPEC[r["id"]]
+    n, m = int(r["cousin_degree"]), int(r["removed"])
+    return n + 1, n + 1 + m, int(r["half"])
+
+LINEAL = {
+ "PARENT_CHILD": [("Parent or child", [
+   "<b>Check your own household first.</b> A match this close is a parent or a child. Birth certificates, adoption papers, and family knowledge settle it quickly.",
+   "<b>Unknown parent?</b> A parent matches relatives on ONE side of your family only (paternal or maternal). Use the match's shared matches to see which side.",
+   "<b>Check the ages.</b> A parent is usually 18-45 years older than the child."])],
+ "GRANDPARENT": [("Grandparent or grandchild", [
+   "<b>List your four grandparents</b> and your children's children. The match is one of them, unless it is an aunt/uncle or half-sibling (same cM range).",
+   "<b>Use the age gap to separate them.</b> A grandparent is usually 40-70 years older. An aunt/uncle or half-sibling is closer to your parents' or your own age.",
+   "<b>Use shared matches.</b> A grandparent matches relatives on one side only. A half-sibling matches one parent's side only."])],
+ "GREAT_GRANDPARENT": [("Great-grandparent or great-grandchild", [
+   "<b>List your eight great-grandparents</b> (or your grandchildren's children) and check which could still be alive or have tested.",
+   "<b>Check the ages.</b> A great-grandparent is usually 60-100 years older. A match close in age is more likely a great-aunt/uncle or half-aunt/uncle.",
+   "<b>Use shared matches</b> to confirm one family side before narrowing to one ancestor."])],
 }
 
+def _n(k, w):
+    return f"{k} {w}" + ("" if k == 1 else "s")
+
+def _flow(g, v, half):
+    """Step-by-step research flow: common ancestor at your generation g, match v generations below."""
+    ancs, other = 2 ** g, (f"your {anc(g - 1)}" if g > 1 else "you")
+    s = [f"<b>Find the ancestor{'' if half else ' couple'}.</b> Open your tree to your {anc(g, True)}: "
+         f"{ancs} people ({ancs // 2} paternal, {ancs // 2} maternal). "
+         + ("The match shares only ONE of them, so test each ancestor separately." if half else
+            "The match descends from a couple, so work one couple at a time.")]
+    s.append("<b>List every partner and child.</b> For each ancestor, list all spouses and partners (second marriages, "
+             "remarriages, unmarried partners) and every child by each. The match descends from a partner who is NOT the "
+             "one in your direct line. Check probate, church, and census records for step-children." if half else
+             f"<b>List their other children.</b> For each couple, list every child except {other}, "
+             "including children who died young or moved away.")
+    s.append(f"<b>Build the descendants.</b> Follow each of those children down {_n(v, 'generation')} in total, until you "
+             f"reach someone who could be the match. At 25-35 years per generation, the match should be born roughly "
+             f"{25 * v}-{35 * v} years after the ancestor.")
+    s.append("<b>Compare with the match.</b> Check the match's surnames, birthplaces, and tree (or username and location "
+             "if the tree is private). Look for those names and places in the lines you just built.")
+    s.append("<b>Confirm with shared matches.</b> Open the match's shared matches. Others who match both of you should "
+             "sit on the same ancestor line. Group them by paternal or maternal side.")
+    s.append("<b>If nothing fits.</b> The same cM fits neighboring relationships. Try the next candidate in the list, "
+             "or the same search one ancestor level up or down. Also allow for unknown parentage in either line.")
+    return s
+
 def guidance(r):
-    """Plain-language 'where to look in your tree' steps for one relationship."""
-    if r["id"] in FIXED:
-        return FIXED[r["id"]]
-    n, m, half = int(r["cousin_degree"]), int(r["removed"]), int(r["half"])
-    a = n + 1
-    L = []
-    if m == 0:
-        L.append(f"Common ancestor: your {anc(a, True) if not half else anc(a)} "
-                 f"({'one ancestor only, not a couple' if half else 'a couple'}).")
-        L.append(f"The match descends from a sibling of your {anc(n)}, {a} generations down.")
-    else:
-        L.append(f"If the match is {m} generation{'s' if m > 1 else ''} YOUNGER than you: look at your {anc(a, True) if not half else anc(a)}.")
-        L.append(f"If the match is {m} generation{'s' if m > 1 else ''} OLDER than you: look at your {anc(a + m, True) if not half else anc(a + m)}.")
-        L.append(f"Descendants: the match's line splits off from yours at that ancestor.")
-    if half:
-        L.append("Half relationship: find the ancestor's OTHER partner. Check second marriages, remarriages, and children born outside the marriage.")
-    else:
-        L.append("Full relationship: both members of the ancestor couple are candidates. Try each.")
-    L.append("Check paternal and maternal sides separately. If you know which side the match is on, search only that side.")
-    return L
+    """List of (heading, [steps]) giving a research workflow for one relationship."""
+    if r["id"] in LINEAL:
+        return LINEAL[r["id"]]
+    a, b, half = paths(r)
+    d = b - a
+    if d == 0:
+        return [("Where to look", _flow(a, b, half))]
+    k, out = abs(d), []
+    for word, g, v in (("YOUNGER" if d > 0 else "OLDER", a, b), ("OLDER" if d > 0 else "YOUNGER", b, a)):
+        gap = f"born roughly {25 * k}-{35 * k} years {'after' if word == 'YOUNGER' else 'before'} you"
+        out.append((f"If the match is {_n(k, 'generation')} {word} than you ({gap})", _flow(g, v, half)))
+    return out
