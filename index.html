@@ -79,7 +79,7 @@ details[open]>summary{background:#2f343c}
 <div class="note">Probabilities come from Shared cM Project v4 histograms with equal weight per relationship. They are guides, not proof. Distant cousins can share 0 cM. Endogamy or pedigree collapse raises totals, so a high result may mean a more distant relationship.</div></section>
 <p class="credit">Data: The Shared cM Project v4.0 (March 2020), Blaine T. Bettinger, CC BY 4.0.</p>
 </main>
-<script type="py" config='{"files":{"./engine.py":"engine.py","./data/relationships.csv":"data/relationships.csv","./data/histograms.json":"data/histograms.json"}}'>
+<script type="py" config='{"files":{"./engine.py?v=3":"engine.py","./data/relationships.csv?v=3":"data/relationships.csv","./data/histograms.json?v=3":"data/histograms.json"}}'>
 from pyscript import document
 from pyodide.ffi import create_proxy
 import engine
@@ -88,6 +88,15 @@ box, out, msg = (document.getElementById(i) for i in ("cm", "out", "msg"))
 top, go = document.getElementById("top"), document.getElementById("go")
 
 def run(event=None):
+    try:
+        _run()
+    except Exception as ex:
+        msg.innerText = f"Error: {type(ex).__name__}: {ex}"
+
+def _run():
+    if not hasattr(engine, "diagram"):
+        msg.innerText = "engine.py on GitHub is out of date. Replace it with the newest engine.py, then hard refresh."
+        return
     try:
         cm = float(box.value.strip().replace(",", ""))
         if cm < 0 or cm > 3800: raise ValueError
